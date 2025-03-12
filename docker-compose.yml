@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  api_gateway:
+    build: ./api_gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ocr_service
+      - chroma_manager
+      - legal_clause_validator
+    env_file:
+      - .env
+
+  ocr_service:
+    build: ./ocr_service
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+
+  chroma_manager:
+    build: ./chroma_manager
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+
+  legal_clause_validator:
+    build: ./legal_clause_validator
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env

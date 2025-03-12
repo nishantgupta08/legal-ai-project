@@ -1,0 +1,21 @@
+{
+    "family": "ocr-microservice-task",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "512",
+    "memory": "1024",
+    "executionRoleArn": "arn:aws:iam::050451388414:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "name": "ocr-microservice",
+            "image": "050451388414.dkr.ecr.ap-south-1.amazonaws.com/ocr-microservice:latest",
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000
+                }
+            ],
+            "essential": true
+        }
+    ]
+}
