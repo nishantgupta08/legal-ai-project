@@ -1,5 +1,8 @@
 version: "3.8"
 
+networks:
+  legal-ai-network:  # Define a common network
+
 services:
   api_gateway:
     build: ./api_gateway
@@ -7,10 +10,12 @@ services:
       - "8000:8000"
     depends_on:
       - ocr_service
-      - chroma_manager
+      - vector_database_service
       - legal_clause_validator
     env_file:
       - .env
+    networks:
+      - legal-ai-network  # Attach to the network
 
   ocr_service:
     build: ./ocr_service
@@ -18,13 +23,17 @@ services:
       - "8001:8001"
     env_file:
       - .env
+    networks:
+      - legal-ai-network
 
-  chroma_manager:
-    build: ./chroma_manager
+  vector_database_service:
+    build: ./vector_database_service
     ports:
       - "8002:8002"
     env_file:
       - .env
+    networks:
+      - legal-ai-network
 
   legal_clause_validator:
     build: ./legal_clause_validator
@@ -32,3 +41,5 @@ services:
       - "8003:8003"
     env_file:
       - .env
+    networks:
+      - legal-ai-network

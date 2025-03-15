@@ -1,9 +1,6 @@
-import os
-import glob
 import statistics
 import pytesseract
 from pdf2image import convert_from_path
-from PIL import Image, ImageDraw
 from typing import List, Tuple, Dict
 
 
@@ -109,40 +106,19 @@ class OCRProcessor:
         return paragraph_texts, paragraph_bboxes
 
     def process_pdf(
-        self,
-        pdf_path: str,
-        output_dir: str = "output",
-        page_range: Tuple[int, int] = None,
-    ) -> List[str]:
-        """Convert PDF to images, extract text, and store results."""
-        pdf_name = os.path.splitext(os.path.basename(pdf_path))[0]
-        pdf_output_dir = os.path.join(output_dir, pdf_name)
-
-        if os.path.exists(pdf_output_dir) and os.listdir(pdf_output_dir):
-            all_paragraph_texts = []
-            for file_name in sorted(
-                glob.glob(os.path.join(pdf_output_dir, "page_*/paragraph_texts.txt")),
-                key=lambda x: int(x.split("page_")[1].split("\\")[0]),
-            ):
-                with open(file_name, "r", encoding="utf-8") as f:
-                    all_paragraph_texts.extend(f.read().splitlines())
-            return all_paragraph_texts
-
-        os.makedirs(pdf_output_dir, exist_ok=True)
+        self, pdf_path: str, page_range: Tuple[int, int] = None
+    ) -> List[Tuple[int, int , str]]:
+        """Convert PDF to images, extract text, and return with page numbers."""
         images = convert_from_path(pdf_path)
-        all_paragraph_texts = []
+        extracted_texts = []
 
         start_page = page_range[0] - 1 if page_range else 0
         end_page = page_range[1] if page_range else len(images)
 
         for i in range(start_page, end_page):
             image = images[i]
-            page_folder = os.path.join(pdf_output_dir, f"page_{i+1}")
-            os.makedirs(page_folder, exist_ok=True)
 
-            image_path = os.path.join(page_folder, f"page_{i+1}.jpg")
-            image.save(image_path, "JPEG")
-
+            # OCR Extraction
             ocr_data = pytesseract.image_to_data(
                 image, output_type=pytesseract.Output.DICT
             )
@@ -152,11 +128,8 @@ class OCRProcessor:
                 line_texts, line_bboxes
             )
 
-            all_paragraph_texts.extend(paragraph_texts)
+            # Store extracted text with page number
+            for para_number, para_text in enumerate(paragraph_texts):
+                extracted_texts.append((i + 1, para_number, para_text))
 
-            with open(
-                os.path.join(page_folder, "paragraph_texts.txt"), "w", encoding="utf-8"
-            ) as f:
-                f.write("\n\n".join(paragraph_texts))
-
-        return all_paragraph_texts
+        return extracted_texts  # Returns list of (page_number, text)

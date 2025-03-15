@@ -1,12 +1,13 @@
 import chromadb
 from chromadb.utils import embedding_functions
 import logging
+import hashlib
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-class ChromaManager:
+class ChromaService:
     """
     Manages ChromaDB for vector storage and retrieval.
     """
@@ -22,19 +23,32 @@ class ChromaManager:
             name=collection_name, embedding_function=self.embedding_function
         )
 
-    def add_documents(self, docs, metadata):
+    
+
+    def add_documents(self, documents):
         """
-        Adds documents to ChromaDB with metadata (filename, page number).
+        Adds texts to ChromaDB with metadata (filename, page number, para number).
         
         Args:
-            docs (List[str]): List of document texts.
-            metadata (List[Tuple[str, int]]): List of (filename, page_number) tuples.
+            documents (List[dict{text, filename, page_number, para_number}]): List of document texts.
         """
-        ids = [str(i) for i in range(len(docs))]
-        metadatas = [{"filename": meta[0], "page_number": meta[1]} for meta in metadata]
-        self.collection.add(ids=ids, documents=docs, metadatas=metadatas)
         
-        logger.info(f"✅ Added {len(docs)} documents to ChromaDB.")
+        texts, metadatas = [], []
+
+        for doc in documents:
+            texts.append(doc.text)
+            metadatas.append({"filename": doc.filename, "page_number": doc.page_number, "para_number": doc.para_number})
+
+        
+        ids = [
+            hashlib.md5(f"{meta['filename']}_{meta['page_number']}_{meta['para_number']}".encode()).hexdigest()
+            for meta in metadatas
+        ]
+
+        self.collection.add(ids=ids, documents=texts, metadatas=metadatas)
+        
+        logger.info(f"✅ Added {len(texts)} paras to ChromaDB.")
+
 
     def retrieve_documents(self, query, top_k=5, metadata_filter=None):
         """
@@ -46,7 +60,7 @@ class ChromaManager:
             metadata_filter (Dict[str, Any], optional): Filter for metadata (e.g., {"filename": "contract1.pdf"}).
 
         Returns:
-            List[Dict[str, Any]]: Retrieved documents along with file name & page number metadata.
+            List[str]: Retrieved document texts.
         """
         query_params = {
             "query_texts": [query],
@@ -60,12 +74,6 @@ class ChromaManager:
         retrieved_docs = []
 
         if results and "documents" in results and results["documents"][0]:
-            for i, doc in enumerate(results["documents"][0]):
-                metadata = results["metadatas"][0][i]  # Extract filename & page number
-                retrieved_docs.append({
-                    "text": doc,
-                    "filename": metadata.get("filename", "Unknown"),
-                    "page_number": metadata.get("page_number", "Unknown")
-                })
+            retrieved_docs = results["documents"][0]  # Extract only text content
 
         return retrieved_docs
